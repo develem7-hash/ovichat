@@ -23,6 +23,7 @@ const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA
 const runtimeWritableBase = isServerlessRuntime ? (process.env.TMPDIR || os.tmpdir()) : process.cwd();
 const resolvedDbDir = process.env.DB_DIR || path.join(runtimeWritableBase, 'db');
 const resolvedUploadsDir = process.env.UPLOADS_DIR || path.join(runtimeWritableBase, 'uploads');
+const resolvedPublicDir = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const DB_PATH = process.env.DB_PATH || path.join(resolvedDbDir, 'echolink.db');
 
 // #region agent log
@@ -59,6 +60,7 @@ debugLog('initial', 'H2', 'server.js:36', 'Startup paths resolved', {
   dbPath: DB_PATH,
   dbDir: resolvedDbDir,
   uploadsDir: resolvedUploadsDir,
+  publicDir: resolvedPublicDir,
   serverlessRuntime: isServerlessRuntime
 });
 // #endregion
@@ -273,8 +275,19 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static('public'));
+app.use(express.static(resolvedPublicDir));
 app.use('/uploads', express.static(resolvedUploadsDir));
+app.get('/', (req, res) => {
+  const indexPath = path.join(resolvedPublicDir, 'index.html');
+  if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+  // #region agent log
+  debugLog('initial', 'H6', 'server.js:278', 'Root index file missing', {
+    indexPath,
+    publicDirExists: fs.existsSync(resolvedPublicDir)
+  });
+  // #endregion
+  return res.status(404).send('Frontend bundle missing on host');
+});
 app.use((req, res, next) => {
   res.on('finish', () => {
     if (res.statusCode >= 500) {
