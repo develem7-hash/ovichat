@@ -1,6 +1,8 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const cors = require('cors');
+const compression = require('compression');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
@@ -13,7 +15,12 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*' },
+  cors: {
+    origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'],
   maxHttpBufferSize: 10 * 1024 * 1024
 });
 
@@ -21,11 +28,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'echolink-secret-key-2024';
 const PORT = process.env.PORT || 3000;
 const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const runtimeWritableBase = isServerlessRuntime ? (process.env.TMPDIR || os.tmpdir()) : process.cwd();
-const resolvedDbDir = process.env.DB_DIR || path.join(runtimeWritableBase, 'db');
 const resolvedUploadsDir = process.env.UPLOADS_DIR || path.join(runtimeWritableBase, 'uploads');
 const resolvedPublicDir = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
-const DB_PATH = process.env.DB_PATH || path.join(resolvedDbDir, 'echolink.db');
 const DATABASE_URL = process.env.DATABASE_URL;
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
+const allowedOrigins = CLIENT_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean);
 
 // #region agent log
 function debugLog(runId, hypothesisId, location, message, data = {}) {
@@ -46,7 +53,6 @@ try {
 } catch (err) {
   // #region agent log
   debugLog('post-fix', 'H2', 'server.js:35', 'Directory ensure failed', {
-    dbDir: resolvedDbDir,
     uploadsDir: resolvedUploadsDir,
     cwd: process.cwd(),
     error: err.message
@@ -58,9 +64,8 @@ try {
 debugLog('initial', 'H2', 'server.js:36', 'Startup paths resolved', {
   cwd: process.cwd(),
   nodeEnv: process.env.NODE_ENV || 'unset',
-  dbPath: DB_PATH,
-  dbDir: resolvedDbDir,
   hasDatabaseUrl: Boolean(DATABASE_URL),
+  clientOrigin: CLIENT_ORIGIN,
   uploadsDir: resolvedUploadsDir,
   publicDir: resolvedPublicDir,
   serverlessRuntime: isServerlessRuntime
@@ -306,9 +311,14 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
+app.use(compression());
+app.use(cors({
+  origin: allowedOrigins.includes('*') ? true : allowedOrigins,
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(resolvedPublicDir));
-app.use('/uploads', express.static(resolvedUploadsDir));
+app.use(express.static(resolvedPublicDir, { maxAge: '1h', etag: true }));
+app.use('/uploads', express.static(resolvedUploadsDir, { maxAge: '1d', etag: true }));
 app.get('/', (req, res) => {
   const indexPath = path.join(resolvedPublicDir, 'index.html');
   if (fs.existsSync(indexPath)) return res.sendFile(indexPath);

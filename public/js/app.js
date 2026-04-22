@@ -52,11 +52,21 @@ const ICE_SERVERS = {
   ]
 };
 
+const APP_CONFIG = window.ECHOLINK_CONFIG || {};
+const API_BASE_URL = (localStorage.getItem('echolink_api_base') || APP_CONFIG.apiBaseUrl || '').replace(/\/+$/, '');
+const SOCKET_BASE_URL = (localStorage.getItem('echolink_socket_base') || APP_CONFIG.socketBaseUrl || API_BASE_URL || '').replace(/\/+$/, '');
+
+function buildUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return API_BASE_URL ? `${API_BASE_URL}${normalizedPath}` : normalizedPath;
+}
+
 // ========================
 // UTILS
 // ========================
 function api(path, method = 'GET', body = null) {
-  return fetch(path, {
+  return fetch(buildUrl(path), {
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -373,7 +383,10 @@ function updateMyProfile() {
 // SOCKET
 // ========================
 function initSocket() {
-  state.socket = io({ auth: { token: state.token } });
+  state.socket = io(SOCKET_BASE_URL || undefined, {
+    auth: { token: state.token },
+    transports: ['websocket', 'polling']
+  });
 
   state.socket.on('connect', () => console.log('Socket connected'));
 
@@ -956,7 +969,7 @@ function handleTyping() {
 async function uploadFile(file) {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch('/api/upload', {
+  const res = await fetch(buildUrl('/api/upload'), {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${state.token}` },
     body: formData
@@ -1077,7 +1090,7 @@ async function sendVoiceMessage() {
   const blob = new Blob(state.recordingChunks, { type: 'audio/webm;codecs=opus' });
   const formData = new FormData();
   formData.append('file', blob, `voice-${Date.now()}.webm`);
-  const res = await fetch('/api/upload', {
+  const res = await fetch(buildUrl('/api/upload'), {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${state.token}` },
     body: formData
@@ -1393,7 +1406,7 @@ function startNetworkMonitor() {
   setInterval(async () => {
     const start = Date.now();
     try {
-      await fetch('/api/health');
+      await fetch(buildUrl('/api/health'));
       const latency = Date.now() - start;
       let quality = 'good', label = `${latency}ms`;
       if (latency > 300) { quality = 'poor'; label = `Slow (${latency}ms)`; }
@@ -1768,7 +1781,7 @@ document.addEventListener('DOMContentLoaded', () => {
     api('/api/contacts/list').then(r => {
       if (!r.error && r) {
         // Validate token by fetching profile
-        fetch('/api/contacts/list', { headers: { 'Authorization': `Bearer ${state.token}` } })
+        fetch(buildUrl('/api/contacts/list'), { headers: { 'Authorization': `Bearer ${state.token}` } })
           .then(res => {
             if (res.ok) {
               // Decode token to get user info
@@ -2092,7 +2105,7 @@ window.addEventListener('load', () => {
     if (savedUser) {
       state.user = JSON.parse(savedUser);
       // Verify token
-      fetch('/api/contacts/list', { headers: { 'Authorization': `Bearer ${state.token}` } })
+      fetch(buildUrl('/api/contacts/list'), { headers: { 'Authorization': `Bearer ${state.token}` } })
         .then(r => { if (r.ok) { window.startApp(); } else { localStorage.removeItem('echolink_token'); localStorage.removeItem('echolink_user'); } })
         .catch(() => {});
     }

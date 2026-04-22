@@ -466,7 +466,13 @@
     <span>Active Call</span>
   </button>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    window.ECHOLINK_CONFIG = {
+      apiBaseUrl: window.ECHOLINK_API_BASE || '',
+      socketBaseUrl: window.ECHOLINK_SOCKET_BASE || ''
+    };
+  </script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>

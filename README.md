@@ -49,13 +49,15 @@ docker run -p 3000:3000 -v echolink-data:/app/db -v echolink-uploads:/app/upload
 |----------|---------|-------------|
 | `PORT` | `3000` | Server port |
 | `JWT_SECRET` | `echolink-secret-key-2024` | JWT signing secret (change in production!) |
-| `DB_PATH` | `./db/echolink.db` | SQLite database path |
+| `DATABASE_URL` | _(required)_ | PostgreSQL connection string |
+| `PGSSLMODE` | `require` | PostgreSQL SSL mode |
+| `CLIENT_ORIGIN` | `*` | Allowed frontend origin(s), comma-separated |
 
 ## Folder Structure
 
 ```
 echolink/
-├── server.js          # Node.js + Socket.io + SQLite backend
+├── server.js          # Node.js + Socket.io + PostgreSQL backend
 ├── package.json
 ├── Dockerfile
 ├── public/
@@ -64,8 +66,6 @@ echolink/
 │   │   └── styles.css # Full styling
 │   └── js/
 │       └── app.js     # All frontend logic
-├── db/
-│   └── echolink.db    # SQLite database (auto-created)
 └── uploads/           # User uploaded files
 ```
 
@@ -168,4 +168,4 @@ GET    /api/health
 - Change `JWT_SECRET` environment variable in production
 - HTTPS is highly recommended for WebRTC and production security
 - File uploads are stored locally — consider cloud storage for scale
-- SQLite is optimized for small–medium deployments; use an external DB for large scale
+- PostgreSQL is required for persistent hosted deployments

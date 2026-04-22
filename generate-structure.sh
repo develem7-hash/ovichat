@@ -28,7 +28,7 @@ touch $PROJECT/uploads/.gitkeep
 cat > $PROJECT/.env.example << 'EOF'
 PORT=3000
 JWT_SECRET=change-me-in-production
-DB_PATH=./db/echolink.db
+DATABASE_URL=postgresql://user:password@host:5432/echolink
 EOF
 
 # Create .gitignore
