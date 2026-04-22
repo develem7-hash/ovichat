@@ -492,7 +492,7 @@ app.get('/api/users/search', authMiddleware, async (req, res) => {
     const results = [];
     for (const u of users) {
       const contact = await db.get('SELECT * FROM contacts WHERE user_id = ? AND contact_id = ?', [req.user.id, u.id]);
-      const request = await db.get('SELECT * FROM connection_requests WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status = "pending"', [req.user.id, u.id, u.id, req.user.id]);
+      const request = await db.get('SELECT * FROM connection_requests WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status = \'pending\'', [req.user.id, u.id, u.id, req.user.id]);
       results.push({ ...u, relationship: contact ? (contact.is_blocked ? 'blocked' : 'contact') : request ? (request.from_user_id === req.user.id ? 'request_sent' : 'request_received') : 'none', request_id: request?.id });
     }
     // #region agent log
@@ -534,7 +534,7 @@ app.post('/api/contacts/request', authMiddleware, async (req, res) => {
     if (!target) return res.status(404).json({ error: 'User not found' });
     const privacy = JSON.parse(target.privacy_settings || '{}');
     if (privacy.requests === 'no_one') return res.status(403).json({ error: 'User not accepting requests' });
-    const existing = await db.get('SELECT * FROM connection_requests WHERE from_user_id = ? AND to_user_id = ? AND status = "pending"', [req.user.id, to_user_id]);
+    const existing = await db.get('SELECT * FROM connection_requests WHERE from_user_id = ? AND to_user_id = ? AND status = \'pending\'', [req.user.id, to_user_id]);
     if (existing) return res.status(409).json({ error: 'Request already sent' });
     const contact = await db.get('SELECT * FROM contacts WHERE user_id = ? AND contact_id = ?', [req.user.id, to_user_id]);
     if (contact) return res.status(409).json({ error: 'Already contacts' });
@@ -551,9 +551,9 @@ app.post('/api/contacts/request', authMiddleware, async (req, res) => {
 
 app.post('/api/contacts/accept/:requestId', authMiddleware, async (req, res) => {
   try {
-    const request = await db.get('SELECT * FROM connection_requests WHERE id = ? AND to_user_id = ? AND status = "pending"', [req.params.requestId, req.user.id]);
+    const request = await db.get('SELECT * FROM connection_requests WHERE id = ? AND to_user_id = ? AND status = \'pending\'', [req.params.requestId, req.user.id]);
     if (!request) return res.status(404).json({ error: 'Request not found' });
-    await db.run('UPDATE connection_requests SET status = "accepted", responded_at = (strftime(\'%s\',\'now\')) WHERE id = ?', [request.id]);
+    await db.run('UPDATE connection_requests SET status = \'accepted\', responded_at = (strftime(\'%s\',\'now\')) WHERE id = ?', [request.id]);
     await db.run('INSERT OR IGNORE INTO contacts (id, user_id, contact_id) VALUES (?, ?, ?)', [uuidv4(), req.user.id, request.from_user_id]);
     await db.run('INSERT OR IGNORE INTO contacts (id, user_id, contact_id) VALUES (?, ?, ?)', [uuidv4(), request.from_user_id, req.user.id]);
     const senderSocket = onlineUsers.get(request.from_user_id);
@@ -567,9 +567,9 @@ app.post('/api/contacts/accept/:requestId', authMiddleware, async (req, res) => 
 
 app.post('/api/contacts/reject/:requestId', authMiddleware, async (req, res) => {
   try {
-    const request = await db.get('SELECT * FROM connection_requests WHERE id = ? AND to_user_id = ? AND status = "pending"', [req.params.requestId, req.user.id]);
+    const request = await db.get('SELECT * FROM connection_requests WHERE id = ? AND to_user_id = ? AND status = \'pending\'', [req.params.requestId, req.user.id]);
     if (!request) return res.status(404).json({ error: 'Request not found' });
-    await db.run('UPDATE connection_requests SET status = "rejected", responded_at = (strftime(\'%s\',\'now\')) WHERE id = ?', [request.id]);
+    await db.run('UPDATE connection_requests SET status = \'rejected\', responded_at = (strftime(\'%s\',\'now\')) WHERE id = ?', [request.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -810,7 +810,7 @@ app.post('/api/support-sessions', authMiddleware, async (req, res) => {
 
     let targetDevice = null;
     if (target_device_id) {
-      targetDevice = await db.get('SELECT * FROM devices WHERE id = ? AND user_id = ? AND companion_type = "desktop"', [target_device_id, target_user_id]);
+      targetDevice = await db.get('SELECT * FROM devices WHERE id = ? AND user_id = ? AND companion_type = \'desktop\'', [target_device_id, target_user_id]);
     } else {
       targetDevice = await db.get(`
         SELECT * FROM devices
@@ -1184,7 +1184,7 @@ io.on('connection', async (socket) => {
     socket.on('disconnect', async () => {
       onlineUsers.delete(userId);
       try {
-        await db.run('UPDATE users SET status = "offline", last_seen = (strftime(\'%s\',\'now\')) WHERE id = ?', [userId]);
+        await db.run('UPDATE users SET status = \'offline\', last_seen = (strftime(\'%s\',\'now\')) WHERE id = ?', [userId]);
         const contacts = await db.all('SELECT contact_id FROM contacts WHERE user_id = ? AND is_blocked = 0', [userId]);
         contacts.forEach(c => {
           const sId = onlineUsers.get(c.contact_id);
