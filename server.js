@@ -7,6 +7,7 @@ const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
@@ -18,7 +19,11 @@ const io = new Server(server, {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'echolink-secret-key-2024';
 const PORT = process.env.PORT || 3000;
-const DB_PATH = process.env.DB_PATH || './db/echolink.db';
+const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const runtimeWritableBase = isServerlessRuntime ? (process.env.TMPDIR || os.tmpdir()) : process.cwd();
+const resolvedDbDir = process.env.DB_DIR || path.join(runtimeWritableBase, 'db');
+const resolvedUploadsDir = process.env.UPLOADS_DIR || path.join(runtimeWritableBase, 'uploads');
+const DB_PATH = process.env.DB_PATH || path.join(resolvedDbDir, 'echolink.db');
 
 // #region agent log
 function debugLog(runId, hypothesisId, location, message, data = {}) {
@@ -32,12 +37,29 @@ function debugLog(runId, hypothesisId, location, message, data = {}) {
 // #endregion
 
 // Ensure directories
-['db', 'uploads'].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+try {
+  [resolvedDbDir, resolvedUploadsDir].forEach((d) => {
+    if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+  });
+} catch (err) {
+  // #region agent log
+  debugLog('post-fix', 'H2', 'server.js:35', 'Directory ensure failed', {
+    dbDir: resolvedDbDir,
+    uploadsDir: resolvedUploadsDir,
+    cwd: process.cwd(),
+    error: err.message
+  });
+  // #endregion
+  throw err;
+}
 // #region agent log
 debugLog('initial', 'H2', 'server.js:36', 'Startup paths resolved', {
   cwd: process.cwd(),
   nodeEnv: process.env.NODE_ENV || 'unset',
-  dbPath: DB_PATH
+  dbPath: DB_PATH,
+  dbDir: resolvedDbDir,
+  uploadsDir: resolvedUploadsDir,
+  serverlessRuntime: isServerlessRuntime
 });
 // #endregion
 
@@ -245,14 +267,14 @@ const db = {
 
 // Multer config
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
+  destination: (req, file, cb) => cb(null, resolvedUploadsDir),
   filename: (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname))
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(resolvedUploadsDir));
 app.use((req, res, next) => {
   res.on('finish', () => {
     if (res.statusCode >= 500) {
