@@ -320,7 +320,15 @@ const socketAuth = (socket, next) => {
   try {
     socket.user = jwt.verify(token, JWT_SECRET);
     next();
-  } catch { next(new Error('Invalid token')); }
+  } catch {
+    // #region agent log
+    debugLog('initial', 'H12', 'server.js:323', 'Socket auth failed', {
+      hasToken: Boolean(token),
+      transport: socket.conn?.transport?.name || 'unknown'
+    });
+    // #endregion
+    next(new Error('Invalid token'));
+  }
 };
 
 // Connected users map: userId -> socketId
@@ -391,6 +399,14 @@ app.post('/api/auth/register', async (req, res) => {
     const avatarValue = display_name.charAt(0).toUpperCase();
     await db.run('INSERT INTO users (id, username, password_hash, display_name, avatar_value) VALUES (?, ?, ?, ?, ?)', 
       [id, username.toLowerCase(), hash, display_name, avatarValue]);
+    const createdUser = await db.get('SELECT id, username, status, custom_status FROM users WHERE id = ?', [id]);
+    // #region agent log
+    debugLog('initial', 'H9', 'server.js:401', 'Register persisted user status', {
+      userId: id,
+      username: createdUser?.username || username.toLowerCase(),
+      status: createdUser?.status || null
+    });
+    // #endregion
     const token = jwt.sign({ id, username: username.toLowerCase() }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id, username: username.toLowerCase(), display_name, avatar_type: 'initial', avatar_value: avatarValue, status: 'offline', custom_status: '' } });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -404,6 +420,14 @@ app.post('/api/auth/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+    // #region agent log
+    debugLog('initial', 'H10', 'server.js:421', 'Login returning user presence snapshot', {
+      userId: user.id,
+      username: user.username,
+      status: user.status,
+      customStatus: user.custom_status || ''
+    });
+    // #endregion
     res.json({ token, user: { id: user.id, username: user.username, display_name: user.display_name, avatar_type: user.avatar_type, avatar_value: user.avatar_value, status: user.status, custom_status: user.custom_status } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -422,6 +446,14 @@ app.get('/api/users/search', authMiddleware, async (req, res) => {
       const request = await db.get('SELECT * FROM connection_requests WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?)) AND status = "pending"', [req.user.id, u.id, u.id, req.user.id]);
       results.push({ ...u, relationship: contact ? (contact.is_blocked ? 'blocked' : 'contact') : request ? (request.from_user_id === req.user.id ? 'request_sent' : 'request_received') : 'none', request_id: request?.id });
     }
+    // #region agent log
+    debugLog('initial', 'H11', 'server.js:447', 'User search result summary', {
+      requesterUserId: req.user.id,
+      query: q,
+      resultCount: results.length,
+      statuses: results.map(r => ({ userId: r.id, status: r.status, relationship: r.relationship }))
+    });
+    // #endregion
     res.json(results);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -961,10 +993,25 @@ io.use(socketAuth);
 io.on('connection', async (socket) => {
   const userId = socket.user.id;
   onlineUsers.set(userId, socket.id);
+  // #region agent log
+  debugLog('initial', 'H12', 'server.js:986', 'Socket connected for user', {
+    userId,
+    socketId: socket.id,
+    transport: socket.conn?.transport?.name || 'unknown'
+  });
+  // #endregion
 
   try {
     // Update status to online
     await db.run('UPDATE users SET status = ?, last_seen = (strftime(\'%s\',\'now\')) WHERE id = ?', ['online', userId]);
+    const userPresence = await db.get('SELECT id, status, last_seen FROM users WHERE id = ?', [userId]);
+    // #region agent log
+    debugLog('initial', 'H10', 'server.js:997', 'Presence set to online after socket connect', {
+      userId,
+      status: userPresence?.status || null,
+      lastSeen: userPresence?.last_seen || null
+    });
+    // #endregion
 
     // Notify contacts of online status
     const contacts = await db.all('SELECT contact_id FROM contacts WHERE user_id = ? AND is_blocked = 0', [userId]);
