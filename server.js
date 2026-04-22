@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -25,6 +25,7 @@ const resolvedDbDir = process.env.DB_DIR || path.join(runtimeWritableBase, 'db')
 const resolvedUploadsDir = process.env.UPLOADS_DIR || path.join(runtimeWritableBase, 'uploads');
 const resolvedPublicDir = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const DB_PATH = process.env.DB_PATH || path.join(resolvedDbDir, 'echolink.db');
+const DATABASE_URL = process.env.DATABASE_URL;
 
 // #region agent log
 function debugLog(runId, hypothesisId, location, message, data = {}) {
@@ -39,7 +40,7 @@ function debugLog(runId, hypothesisId, location, message, data = {}) {
 
 // Ensure directories
 try {
-  [resolvedDbDir, resolvedUploadsDir].forEach((d) => {
+  [resolvedUploadsDir].forEach((d) => {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
   });
 } catch (err) {
@@ -59,6 +60,7 @@ debugLog('initial', 'H2', 'server.js:36', 'Startup paths resolved', {
   nodeEnv: process.env.NODE_ENV || 'unset',
   dbPath: DB_PATH,
   dbDir: resolvedDbDir,
+  hasDatabaseUrl: Boolean(DATABASE_URL),
   uploadsDir: resolvedUploadsDir,
   publicDir: resolvedPublicDir,
   serverlessRuntime: isServerlessRuntime
@@ -66,47 +68,77 @@ debugLog('initial', 'H2', 'server.js:36', 'Startup paths resolved', {
 // #endregion
 
 // Database setup
-const dbRaw = new sqlite3.Database(DB_PATH, (err) => {
-  // #region agent log
-  debugLog('initial', err ? 'H1' : 'H5', 'server.js:44', 'SQLite open result', {
-    ok: !err,
-    error: err ? err.message : null
-  });
-  // #endregion
+if (!DATABASE_URL) throw new Error('DATABASE_URL is required for managed PostgreSQL persistence.');
+
+const dbPool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false }
 });
+
+function normalizeSql(sql) {
+  let normalized = String(sql);
+  let paramIndex = 1;
+  normalized = normalized.replace(/PRAGMA\s+journal_mode\s*=\s*WAL\s*;?/gi, '');
+  normalized = normalized.replace(/PRAGMA\s+foreign_keys\s*=\s*ON\s*;?/gi, '');
+  normalized = normalized.replace(/unixepoch\(\)/gi, 'EXTRACT(EPOCH FROM NOW())::BIGINT');
+  normalized = normalized.replace(/strftime\('%s','now'\)/gi, 'EXTRACT(EPOCH FROM NOW())::BIGINT');
+  normalized = normalized.replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT INTO');
+  normalized = normalized.replace(/AUTOINCREMENT/gi, '');
+  normalized = normalized.replace(/\?/g, () => `$${paramIndex++}`);
+  if (/INSERT\s+INTO[\s\S]+VALUES[\s\S]+$/i.test(normalized) && /INSERT OR IGNORE/i.test(sql)) {
+    normalized = `${normalized} ON CONFLICT DO NOTHING`;
+  }
+  return normalized;
+}
+
+async function queryDb(sql, params = []) {
+  const text = normalizeSql(sql);
+  return dbPool.query(text, params);
+}
+
 const db = {
-  run: (sql, params = []) => new Promise((res, rej) => dbRaw.run(sql, params, function(err) {
-    if (err) {
+  run: async (sql, params = []) => {
+    try {
+      return await queryDb(sql, params);
+    } catch (err) {
       // #region agent log
-      debugLog('initial', 'H1', 'server.js:56', 'DB run failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      debugLog('initial', 'H1', 'server.js:95', 'DB run failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
       // #endregion
-      rej(err);
-    } else res(this);
-  })),
-  get: (sql, params = []) => new Promise((res, rej) => dbRaw.get(sql, params, (err, row) => {
-    if (err) {
+      throw err;
+    }
+  },
+  get: async (sql, params = []) => {
+    try {
+      const result = await queryDb(sql, params);
+      return result.rows[0];
+    } catch (err) {
       // #region agent log
-      debugLog('initial', 'H1', 'server.js:65', 'DB get failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      debugLog('initial', 'H1', 'server.js:106', 'DB get failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
       // #endregion
-      rej(err);
-    } else res(row);
-  })),
-  all: (sql, params = []) => new Promise((res, rej) => dbRaw.all(sql, params, (err, rows) => {
-    if (err) {
+      throw err;
+    }
+  },
+  all: async (sql, params = []) => {
+    try {
+      const result = await queryDb(sql, params);
+      return result.rows;
+    } catch (err) {
       // #region agent log
-      debugLog('initial', 'H1', 'server.js:74', 'DB all failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      debugLog('initial', 'H1', 'server.js:117', 'DB all failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
       // #endregion
-      rej(err);
-    } else res(rows);
-  })),
-  exec: (sql) => new Promise((res, rej) => dbRaw.exec(sql, err => {
-    if (err) {
+      throw err;
+    }
+  },
+  exec: async (sql) => {
+    try {
+      await queryDb(sql);
+    } catch (err) {
       // #region agent log
-      debugLog('initial', 'H3', 'server.js:83', 'DB exec failed during init', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      debugLog('initial', 'H3', 'server.js:127', 'DB exec failed during init', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
       // #endregion
-      rej(err);
-    } else res();
-  })),
+      throw err;
+    }
+  },
 };
 
 // Initialization
@@ -419,16 +451,18 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+    await db.run('UPDATE users SET status = ?, last_seen = (strftime(\'%s\',\'now\')) WHERE id = ?', ['online', user.id]);
+    const refreshedUser = await db.get('SELECT * FROM users WHERE id = ?', [user.id]);
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
     // #region agent log
     debugLog('initial', 'H10', 'server.js:421', 'Login returning user presence snapshot', {
-      userId: user.id,
-      username: user.username,
-      status: user.status,
-      customStatus: user.custom_status || ''
+      userId: refreshedUser.id,
+      username: refreshedUser.username,
+      status: refreshedUser.status,
+      customStatus: refreshedUser.custom_status || ''
     });
     // #endregion
-    res.json({ token, user: { id: user.id, username: user.username, display_name: user.display_name, avatar_type: user.avatar_type, avatar_value: user.avatar_value, status: user.status, custom_status: user.custom_status } });
+    res.json({ token, user: { id: refreshedUser.id, username: refreshedUser.username, display_name: refreshedUser.display_name, avatar_type: refreshedUser.avatar_type, avatar_value: refreshedUser.avatar_value, status: refreshedUser.status, custom_status: refreshedUser.custom_status } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -437,9 +471,24 @@ app.post('/api/auth/login', async (req, res) => {
 // ========================
 app.get('/api/users/search', authMiddleware, async (req, res) => {
   const q = req.query.q?.toLowerCase();
-  if (!q || q.length < 2) return res.json([]);
   try {
-    const users = await db.all(`SELECT id, username, display_name, avatar_type, avatar_value, status, custom_status FROM users WHERE username LIKE ? AND id != ? LIMIT 10`, [`%${q}%`, req.user.id]);
+    const users = q
+      ? await db.all(
+        `SELECT id, username, display_name, avatar_type, avatar_value, status, custom_status
+         FROM users
+         WHERE username LIKE ? AND id != ?
+         ORDER BY display_name ASC
+         LIMIT 50`,
+        [`%${q}%`, req.user.id]
+      )
+      : await db.all(
+        `SELECT id, username, display_name, avatar_type, avatar_value, status, custom_status
+         FROM users
+         WHERE id != ?
+         ORDER BY display_name ASC
+         LIMIT 50`,
+        [req.user.id]
+      );
     const results = [];
     for (const u of users) {
       const contact = await db.get('SELECT * FROM contacts WHERE user_id = ? AND contact_id = ?', [req.user.id, u.id]);
@@ -1018,6 +1067,28 @@ io.on('connection', async (socket) => {
     contacts.forEach(c => {
       const socketId = onlineUsers.get(c.contact_id);
       if (socketId) io.to(socketId).emit('presence', { userId, status: 'online' });
+    });
+
+    // Emit pending requests immediately after login/connect so users see notifications.
+    const pendingRequests = await db.all(`
+      SELECT cr.id, cr.message, cr.from_user_id, u.username, u.display_name, u.avatar_type, u.avatar_value
+      FROM connection_requests cr
+      JOIN users u ON cr.from_user_id = u.id
+      WHERE cr.to_user_id = ? AND cr.status = 'pending'
+      ORDER BY cr.created_at DESC
+    `, [userId]);
+    pendingRequests.forEach((request) => {
+      io.to(socket.id).emit('connection-request', {
+        id: request.id,
+        from_user: {
+          id: request.from_user_id,
+          username: request.username,
+          display_name: request.display_name,
+          avatar_type: request.avatar_type,
+          avatar_value: request.avatar_value
+        },
+        message: request.message
+      });
     });
 
     // Join group rooms
