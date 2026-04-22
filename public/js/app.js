@@ -41,6 +41,7 @@ const state = {
   supportAvailability: {},
   desktopSupportSessions: {},
   incomingDesktopSupportSession: null,
+  socketConnected: false,
 };
 
 const EMOJIS = ['😀','😂','🥰','😍','🤩','😎','🥳','😅','😭','😤','🤔','🤯','😴','🥺','😈','👍','👎','❤️','🔥','💯','🎉','✨','💪','🙌','👏','🤝','💀','👀','🤣','😊','🎊','🚀','💡','⚡','🌟','💎','🏆','🎯','🌈','🍕'];
@@ -172,6 +173,10 @@ function getStatusText(status, lastSeen) {
     return `Last seen ${formatTime(lastSeen)}`;
   }
   return 'Offline';
+}
+
+function isRealtimeConnected() {
+  return Boolean(state.socket && state.socket.connected && state.socketConnected);
 }
 
 function getContactDisplayName(userId) {
@@ -374,21 +379,37 @@ function updateMyProfile() {
   if (!u) return;
   document.getElementById('my-avatar').textContent = getAvatar(u);
   document.getElementById('my-display-name').textContent = u.display_name;
-  document.getElementById('my-status-text').textContent = u.status || 'Online';
+  const realtimeConnected = isRealtimeConnected();
+  document.getElementById('my-status-text').textContent = realtimeConnected ? (u.status || 'online') : 'reconnecting...';
   const dot = document.getElementById('my-status-dot');
-  dot.className = `status-dot ${u.status || 'online'}`;
+  dot.className = `status-dot ${realtimeConnected ? (u.status || 'online') : 'offline'}`;
 }
 
 // ========================
 // SOCKET
 // ========================
 function initSocket() {
+  if (state.socket) state.socket.disconnect();
   state.socket = io(SOCKET_BASE_URL || undefined, {
     auth: { token: state.token },
     transports: ['websocket', 'polling']
   });
 
-  state.socket.on('connect', () => console.log('Socket connected'));
+  state.socket.on('connect', () => {
+    state.socketConnected = true;
+    updateMyProfile();
+    console.log('Socket connected');
+  });
+  state.socket.on('connect_error', (err) => {
+    state.socketConnected = false;
+    updateMyProfile();
+    console.error('Socket connect error:', err?.message || err);
+  });
+  state.socket.on('disconnect', (reason) => {
+    state.socketConnected = false;
+    updateMyProfile();
+    console.warn('Socket disconnected:', reason);
+  });
 
   state.socket.on('presence', ({ userId, status, custom_status }) => {
     const contact = state.contacts.find(c => c.contact_id === userId || c.id === userId);
@@ -912,6 +933,7 @@ function sendMessage() {
   const input = document.getElementById('message-input');
   const text = input.innerText.trim();
   if (!text || !state.activeChat) return;
+  if (!isRealtimeConnected()) { toast('Realtime disconnected. Reconnecting...', 'error'); return; }
   input.innerHTML = '';
 
   const tempId = 'tmp-' + Date.now();
@@ -980,6 +1002,7 @@ async function uploadFile(file) {
 async function handleFileSelect(e) {
   const file = e.target.files[0];
   if (!file || !state.activeChat) return;
+  if (!isRealtimeConnected()) { toast('Realtime disconnected. Reconnecting...', 'error'); return; }
 
   toast('Uploading...', 'info');
   const result = await uploadFile(file);
@@ -1087,6 +1110,7 @@ function stopRecording() {
 }
 
 async function sendVoiceMessage() {
+  if (!isRealtimeConnected()) { toast('Realtime disconnected. Reconnecting...', 'error'); return; }
   const blob = new Blob(state.recordingChunks, { type: 'audio/webm;codecs=opus' });
   const formData = new FormData();
   formData.append('file', blob, `voice-${Date.now()}.webm`);
@@ -1146,6 +1170,7 @@ function viewImage(url) {
 // ========================
 async function startCall(type) {
   if (!state.activeChat || state.activeChatType !== 'dm') return;
+  if (!isRealtimeConnected()) { toast('Realtime disconnected. Reconnecting...', 'error'); return; }
   state.callType = type;
   state.callPeer = state.activeChat;
 
