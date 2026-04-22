@@ -12,6 +12,16 @@ const fs = require('fs');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'echolink-secret-key-2024';
+const PORT = process.env.PORT || 3000;
+const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const runtimeWritableBase = isServerlessRuntime ? (process.env.TMPDIR || os.tmpdir()) : process.cwd();
+const resolvedUploadsDir = process.env.UPLOADS_DIR || path.join(runtimeWritableBase, 'uploads');
+const resolvedPublicDir = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
+const DATABASE_URL = process.env.DATABASE_URL;
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
+const allowedOrigins = CLIENT_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -23,16 +33,6 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
   maxHttpBufferSize: 10 * 1024 * 1024
 });
-
-const JWT_SECRET = process.env.JWT_SECRET || 'echolink-secret-key-2024';
-const PORT = process.env.PORT || 3000;
-const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-const runtimeWritableBase = isServerlessRuntime ? (process.env.TMPDIR || os.tmpdir()) : process.cwd();
-const resolvedUploadsDir = process.env.UPLOADS_DIR || path.join(runtimeWritableBase, 'uploads');
-const resolvedPublicDir = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
-const DATABASE_URL = process.env.DATABASE_URL;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
-const allowedOrigins = CLIENT_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean);
 
 // #region agent log
 function debugLog(runId, hypothesisId, location, message, data = {}) {
