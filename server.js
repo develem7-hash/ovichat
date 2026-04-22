@@ -20,22 +20,76 @@ const JWT_SECRET = process.env.JWT_SECRET || 'echolink-secret-key-2024';
 const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || './db/echolink.db';
 
+// #region agent log
+function debugLog(runId, hypothesisId, location, message, data = {}) {
+  if (typeof fetch !== 'function') return;
+  fetch('http://127.0.0.1:7641/ingest/6335803e-2b2e-47cc-9cf2-ec6bc8bd9ef5', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ac1dc5' },
+    body: JSON.stringify({ sessionId: 'ac1dc5', runId, hypothesisId, location, message, data, timestamp: Date.now() })
+  }).catch(() => {});
+}
+// #endregion
+
 // Ensure directories
 ['db', 'uploads'].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+// #region agent log
+debugLog('initial', 'H2', 'server.js:36', 'Startup paths resolved', {
+  cwd: process.cwd(),
+  nodeEnv: process.env.NODE_ENV || 'unset',
+  dbPath: DB_PATH
+});
+// #endregion
 
 // Database setup
-const dbRaw = new sqlite3.Database(DB_PATH);
+const dbRaw = new sqlite3.Database(DB_PATH, (err) => {
+  // #region agent log
+  debugLog('initial', err ? 'H1' : 'H5', 'server.js:44', 'SQLite open result', {
+    ok: !err,
+    error: err ? err.message : null
+  });
+  // #endregion
+});
 const db = {
-  run: (sql, params = []) => new Promise((res, rej) => dbRaw.run(sql, params, function(err) { if (err) rej(err); else res(this); })),
-  get: (sql, params = []) => new Promise((res, rej) => dbRaw.get(sql, params, (err, row) => err ? rej(err) : res(row))),
-  all: (sql, params = []) => new Promise((res, rej) => dbRaw.all(sql, params, (err, rows) => err ? rej(err) : res(rows))),
-  exec: (sql) => new Promise((res, rej) => dbRaw.exec(sql, err => err ? rej(err) : res())),
+  run: (sql, params = []) => new Promise((res, rej) => dbRaw.run(sql, params, function(err) {
+    if (err) {
+      // #region agent log
+      debugLog('initial', 'H1', 'server.js:56', 'DB run failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      // #endregion
+      rej(err);
+    } else res(this);
+  })),
+  get: (sql, params = []) => new Promise((res, rej) => dbRaw.get(sql, params, (err, row) => {
+    if (err) {
+      // #region agent log
+      debugLog('initial', 'H1', 'server.js:65', 'DB get failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      // #endregion
+      rej(err);
+    } else res(row);
+  })),
+  all: (sql, params = []) => new Promise((res, rej) => dbRaw.all(sql, params, (err, rows) => {
+    if (err) {
+      // #region agent log
+      debugLog('initial', 'H1', 'server.js:74', 'DB all failed', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      // #endregion
+      rej(err);
+    } else res(rows);
+  })),
+  exec: (sql) => new Promise((res, rej) => dbRaw.exec(sql, err => {
+    if (err) {
+      // #region agent log
+      debugLog('initial', 'H3', 'server.js:83', 'DB exec failed during init', { sqlStart: String(sql).trim().slice(0, 120), error: err.message });
+      // #endregion
+      rej(err);
+    } else res();
+  })),
 };
 
 // Initialization
 (async () => {
-  await db.exec('PRAGMA journal_mode = WAL');
-  await db.exec('PRAGMA foreign_keys = ON');
+  try {
+    await db.exec('PRAGMA journal_mode = WAL');
+    await db.exec('PRAGMA foreign_keys = ON');
 
   // Schema
   await db.exec(`
@@ -179,6 +233,14 @@ const db = {
       FOREIGN KEY (actor_user_id) REFERENCES users(id)
     );
   `);
+    // #region agent log
+    debugLog('initial', 'H3', 'server.js:238', 'Database initialization completed', { ok: true });
+    // #endregion
+  } catch (err) {
+    // #region agent log
+    debugLog('initial', 'H3', 'server.js:242', 'Database initialization failed', { error: err.message });
+    // #endregion
+  }
 })();
 
 // Multer config
@@ -191,6 +253,20 @@ const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (res.statusCode >= 500) {
+      // #region agent log
+      debugLog('initial', 'H4', 'server.js:258', 'HTTP 5xx response observed', {
+        method: req.method,
+        path: req.originalUrl,
+        statusCode: res.statusCode
+      });
+      // #endregion
+    }
+  });
+  next();
+});
 
 // Auth middleware
 const authMiddleware = (req, res, next) => {
@@ -1018,4 +1094,9 @@ io.on('connection', async (socket) => {
   } catch (e) { console.error(e); }
 });
 
-server.listen(PORT, () => console.log(`EchoLink running on http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  // #region agent log
+  debugLog('initial', 'H5', 'server.js:1085', 'Server listen started', { port: PORT });
+  // #endregion
+  console.log(`EchoLink running on http://localhost:${PORT}`);
+});
