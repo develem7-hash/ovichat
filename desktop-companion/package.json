@@ -1,0 +1,13 @@
+{
+  "name": "echolink-desktop-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop companion scaffold for EchoLink remote support",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^36.2.1"
+  }
+}

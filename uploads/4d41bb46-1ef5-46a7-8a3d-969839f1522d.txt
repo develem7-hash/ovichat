@@ -1,0 +1,27 @@
+Within the main folder [themeforest-chocolatier-shopify-theme.zip] there will be following folder and files.
+
+Readme.txt
+Log.txt
+chocolatier.zip
+
+-------------------------------------------------------------------
+Documentation Link
+https://buddhathemes.gitbook.io/chocolatier
+
+
+Kindly refer our documentation for installing the theme and doing customization. 
+If you need any assistance, plz contact us through support@buddhathemes.com
+
+
+Thank You.
+
+
+
+
+
+
+
+
+
+
+

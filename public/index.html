@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EchoLink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-bg">
+    <div class="auth-orb auth-orb-1"></div>
+    <div class="auth-orb auth-orb-2"></div>
+    <div class="auth-orb auth-orb-3"></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-icon">⬡</div>
+      <span class="logo-text">EchoLink</span>
+    </div>
+    <div class="auth-tagline">Connect. Communicate. Collaborate.</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Sign In</button>
+      <button class="auth-tab" data-tab="register">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" class="auth-form active">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="your_username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="login-error" class="auth-error"></div>
+      <button type="submit" class="btn-primary btn-full">Sign In</button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="register-form" class="auth-form">
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" id="reg-display-name" placeholder="Your Name" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="reg-username" placeholder="unique_username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min 6 characters" autocomplete="new-password">
+      </div>
+      <div id="reg-error" class="auth-error"></div>
+      <button type="submit" class="btn-primary btn-full">Create Account</button>
+    </form>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="app hidden">
+
+  <!-- LEFT PANEL: Contacts -->
+  <aside class="panel-left" id="panel-left">
+    <div class="sidebar-header">
+      <div class="logo-compact">⬡ <span>EchoLink</span></div>
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-new-group" title="New Group">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-find-users" title="Find Users (Ctrl+K)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-requests" title="Connection Requests">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          <span class="badge hidden" id="requests-badge">0</span>
+        </button>
+        <button class="icon-btn" id="btn-theme" title="Toggle Theme">
+          <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg id="theme-icon-sun" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- User profile strip -->
+    <div class="my-profile-strip" id="my-profile-strip">
+      <div class="avatar" id="my-avatar">?</div>
+      <div class="profile-info">
+        <div class="profile-name" id="my-display-name">...</div>
+        <div class="profile-status-row">
+          <div class="status-dot online" id="my-status-dot"></div>
+          <span id="my-status-text">Online</span>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <button class="icon-btn-sm" id="btn-edit-profile" title="Edit Profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn-sm" id="btn-logout" title="Logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="contact-search" placeholder="Search conversations...">
+    </div>
+
+    <!-- Contacts List -->
+    <div class="contacts-list" id="contacts-list">
+      <div class="empty-state">
+        <div class="empty-icon">💬</div>
+        <p>No contacts yet</p>
+        <button class="btn-secondary" onclick="document.getElementById('btn-find-users').click()">Find People</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTER PANEL: Chat -->
+  <main class="panel-center" id="panel-center">
+    <!-- Empty state -->
+    <div class="chat-empty" id="chat-empty">
+      <div class="empty-chat-bg">
+        <div class="empty-hex">⬡</div>
+      </div>
+      <h2>Welcome to EchoLink</h2>
+      <p>Select a contact to start chatting or find new people to connect with</p>
+      <button class="btn-primary" onclick="document.getElementById('btn-find-users').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Find People
+      </button>
+    </div>
+
+    <!-- Chat View -->
+    <div class="chat-view hidden" id="chat-view">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="chat-back-btn" id="chat-back-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="chat-avatar" id="chat-header-avatar"></div>
+        <div class="chat-header-info">
+          <div class="chat-header-name" id="chat-header-name">...</div>
+          <div class="chat-header-status" id="chat-header-status">Offline</div>
+          <div class="chat-header-support-status hidden" id="chat-header-support-status"></div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="icon-btn" id="btn-audio-call" title="Audio Call">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-video-call" title="Video Call">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-screen-share" title="Screen Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-desktop-support" title="Desktop Support">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/><path d="M15 10h4"/><path d="M17 8v4"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-chat-info" title="Chat Info">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Network quality bar -->
+      <div class="network-bar" id="network-bar">
+        <div class="network-quality" id="network-quality-indicator">
+          <div class="quality-dot good"></div>
+          <span id="network-quality-text">Good connection</span>
+        </div>
+      </div>
+
+      <!-- Messages Area -->
+      <div class="messages-area" id="messages-area">
+        <div class="messages-loading" id="messages-loading">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator hidden" id="typing-indicator">
+        <span id="typing-name">Someone</span> is typing
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <!-- Reply Preview -->
+      <div class="reply-preview hidden" id="reply-preview">
+        <div class="reply-bar"></div>
+        <div class="reply-content">
+          <span class="reply-label">Replying to</span>
+          <span id="reply-text-preview"></span>
+        </div>
+        <button class="icon-btn-sm" id="cancel-reply">✕</button>
+      </div>
+
+      <!-- Message Input -->
+      <div class="message-input-area">
+        <button class="icon-btn" id="btn-attach" title="Attach File">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <input type="file" id="file-input" hidden>
+        <button class="icon-btn" id="btn-emoji" title="Emoji">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </button>
+        <div class="input-wrapper">
+          <div class="message-input" id="message-input" contenteditable="true" data-placeholder="Type a message..."></div>
+        </div>
+        <button class="icon-btn" id="btn-voice-msg" title="Voice Message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <button class="btn-send" id="btn-send" title="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+
+      <!-- Emoji Picker -->
+      <div class="emoji-picker hidden" id="emoji-picker">
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL: Call / Info -->
+  <aside class="panel-right hidden" id="panel-right">
+    <!-- Active Call -->
+    <div class="call-panel" id="call-panel">
+      <div class="call-header">
+        <span id="call-type-label">Audio Call</span>
+        <div class="call-timer" id="call-timer">00:00</div>
+        <div class="call-window-actions">
+          <button class="icon-btn-sm" id="btn-minimize-call" title="Minimize">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+          </button>
+          <button class="icon-btn-sm" id="btn-fullscreen-call" title="Wide/Full Screen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="remote-support-banner hidden" id="remote-support-banner" aria-live="polite">
+        <div class="remote-support-banner-copy">
+          <strong id="remote-support-status-title">Remote support inactive</strong>
+          <span id="remote-support-status-copy">Remote support is not active.</span>
+        </div>
+        <button class="btn-secondary hidden" id="btn-stop-remote-support" type="button">Stop Access</button>
+      </div>
+      <div class="call-videos" id="call-videos">
+        <video id="local-video" autoplay muted playsinline class="local-video"></video>
+        <video id="remote-video" autoplay playsinline class="remote-video"></video>
+      </div>
+      <div class="call-controls">
+        <button class="call-btn" id="btn-toggle-mute" title="Mute (M)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <button class="call-btn" id="btn-toggle-camera" title="Camera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </button>
+        <button class="call-btn" id="btn-toggle-speaker" title="Mute Speaker">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
+        <button class="call-btn" id="btn-toggle-output" title="Switch Output Device">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <button class="call-btn" id="btn-remote-support" title="Request Remote Support">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7"/><path d="M16.5 11l-4 4 4 4"/><path d="M12.5 15h9"/></svg>
+        </button>
+        <button class="call-btn danger" id="btn-end-call" title="End Call (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 3.07 13a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 2 2.18V2a2 2 0 0 1 2-2 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L3 8.09a16 16 0 0 0 6 6z"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+        <button class="call-btn" id="btn-share-screen-call" title="Share Screen (S)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- INCOMING CALL MODAL -->
+<div class="modal-overlay hidden" id="incoming-call-modal">
+  <div class="incoming-call-card">
+    <div class="incoming-call-avatar" id="incoming-call-avatar">?</div>
+    <div class="incoming-call-name" id="incoming-call-name">Someone</div>
+    <div class="incoming-call-type" id="incoming-call-type">Audio Call</div>
+    <div class="incoming-call-actions">
+      <button class="call-btn danger" id="btn-reject-call">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 3.07 13a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 2 2.18V2a2 2 0 0 1 2-2 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L3 8.09a16 16 0 0 0 6 6z"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+      <button class="call-btn success" id="btn-accept-call">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- FIND USERS MODAL -->
+<div class="modal-overlay hidden" id="find-users-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Find People</h3>
+      <button class="icon-btn-sm modal-close" data-modal="find-users-modal">✕</button>
+    </div>
+    <div class="modal-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="user-search-input" placeholder="Search by username...">
+    </div>
+    <div id="search-results" class="search-results">
+      <div class="suggested-label">Suggested</div>
+      <div id="suggested-users"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONNECTION REQUESTS MODAL -->
+<div class="modal-overlay hidden" id="requests-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Connection Requests</h3>
+      <button class="icon-btn-sm modal-close" data-modal="requests-modal">✕</button>
+    </div>
+    <div id="requests-list" class="requests-list">
+      <div class="empty-state-sm">No pending requests</div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW GROUP MODAL -->
+<div class="modal-overlay hidden" id="new-group-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>New Group</h3>
+      <button class="icon-btn-sm modal-close" data-modal="new-group-modal">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Group Name</label>
+      <input type="text" id="group-name-input" placeholder="Group name...">
+    </div>
+    <div class="form-group">
+      <label>Add Members</label>
+      <div id="group-members-list" class="group-members-selector"></div>
+    </div>
+    <button class="btn-primary btn-full" id="btn-create-group">Create Group</button>
+  </div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-overlay hidden" id="profile-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Edit Profile</h3>
+      <button class="icon-btn-sm modal-close" data-modal="profile-modal">✕</button>
+    </div>
+    <div class="profile-avatar-edit">
+      <div class="avatar big" id="profile-edit-avatar">?</div>
+    </div>
+    <div class="form-group">
+      <label>Display Name</label>
+      <input type="text" id="profile-display-name" placeholder="Your Name">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="profile-status">
+        <option value="online">🟢 Online</option>
+        <option value="away">🟡 Away</option>
+        <option value="busy">🔴 Busy</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Custom Status</label>
+      <input type="text" id="profile-custom-status" placeholder="What's on your mind?">
+    </div>
+    <button class="btn-primary btn-full" id="btn-save-profile">Save Changes</button>
+  </div>
+</div>
+
+<!-- VOICE RECORDING UI -->
+<div class="voice-recording-ui hidden" id="voice-recording-ui">
+  <div class="voice-rec-inner">
+    <div class="rec-pulse"></div>
+    <span id="rec-timer">0:00</span>
+    <div class="rec-waveform" id="rec-waveform">
+      <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      <div class="wave-bar"></div><div class="wave-bar"></div>
+    </div>
+    <button class="btn-secondary" id="cancel-recording">Cancel</button>
+    <button class="btn-primary" id="stop-recording">Send</button>
+  </div>
+</div>
+
+<!-- REMOTE ACCESS PERMISSION MODAL -->
+<div class="modal-overlay hidden" id="remote-access-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Remote Support Request</h3>
+      <button class="icon-btn-sm modal-close" data-modal="remote-access-modal">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 20px 0">
+      <p><span id="remote-request-name" style="font-weight:700;color:var(--accent)"></span> wants to provide remote assistance.</p>
+      <p style="margin-top:15px;font-size:13px;color:var(--text-secondary)">Allowing access lets them move the cursor, click, and type inside the shared EchoLink session. You will continue seeing a visible support notice while access is active, and you can stop access at any time.</p>
+      <label class="remote-consent-check" for="remote-support-consent">
+        <input type="checkbox" id="remote-support-consent">
+        <span>I understand this access is for the current EchoLink session and can be revoked by me at any time.</span>
+      </label>
+    </div>
+    <div class="modal-footer" style="margin-top:20px;display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn-secondary" id="btn-deny-remote">Deny</button>
+      <button class="btn-primary" id="btn-allow-remote" disabled>Allow Access</button>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP SUPPORT MODAL -->
+<div class="modal-overlay hidden" id="desktop-support-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Desktop Support</h3>
+      <button class="icon-btn-sm modal-close" data-modal="desktop-support-modal">✕</button>
+    </div>
+    <div class="desktop-support-summary">
+      <div class="desktop-support-kicker" id="desktop-support-contact-name">No contact selected</div>
+      <div class="desktop-support-state" id="desktop-support-device-status">Checking desktop companion status...</div>
+      <p class="desktop-support-copy" id="desktop-support-session-copy">Desktop support sessions require an online desktop companion and explicit approval from the person receiving help.</p>
+    </div>
+    <div class="desktop-support-device-list" id="desktop-support-device-list"></div>
+    <div class="modal-footer" style="margin-top:20px;display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn-secondary" id="btn-refresh-desktop-support">Refresh</button>
+      <button class="btn-secondary hidden" id="btn-revoke-desktop-support">Revoke Session</button>
+      <button class="btn-primary" id="btn-request-desktop-support">Request Desktop Support</button>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP SUPPORT REQUEST MODAL -->
+<div class="modal-overlay hidden" id="desktop-support-request-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Desktop Support Approval</h3>
+      <button class="icon-btn-sm modal-close" data-modal="desktop-support-request-modal">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 8px 0 0">
+      <p><span id="desktop-support-request-name" style="font-weight:700;color:var(--accent)"></span> wants to start a desktop support session.</p>
+      <p class="desktop-support-copy" id="desktop-support-request-copy">This is the approval step for the desktop companion flow. You should only approve when you are ready to continue on your own machine with visible, revocable access.</p>
+    </div>
+    <div class="modal-footer" style="margin-top:20px;display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn-secondary" id="btn-deny-desktop-support">Deny</button>
+      <button class="btn-primary" id="btn-approve-desktop-support">Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container"></div>
+
+  <button id="floating-call-btn" class="floating-call-btn hidden">
+    <div class="pulse-ring"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    <span>Active Call</span>
+  </button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

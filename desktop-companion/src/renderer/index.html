@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EchoLink Desktop Companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div>
+        <div class="brand-mark">[]</div>
+        <div class="brand-name">EchoLink Companion</div>
+        <p class="brand-copy">Native desktop-side approval and presence layer for trusted remote support.</p>
+      </div>
+
+      <div class="status-stack">
+        <div class="status-card">
+          <span class="eyebrow">Device</span>
+          <strong id="device-name">Loading...</strong>
+          <span id="device-platform" class="muted"></span>
+        </div>
+        <div class="status-card">
+          <span class="eyebrow">Connection</span>
+          <strong id="companion-connection-state">Offline</strong>
+          <span id="companion-register-state" class="muted">Register this companion to start receiving desktop support requests.</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <span class="eyebrow">Setup</span>
+            <h1>Register This Companion</h1>
+          </div>
+          <button id="btn-register" class="btn-primary">Register Device</button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Server URL</span>
+            <input id="server-url" type="url" placeholder="http://localhost:3000">
+          </label>
+          <label>
+            <span>JWT Token</span>
+            <input id="auth-token" type="password" placeholder="Paste EchoLink auth token">
+          </label>
+          <label>
+            <span>Device Name</span>
+            <input id="device-name-input" type="text" placeholder="Desktop Companion">
+          </label>
+          <label>
+            <span>Platform Label</span>
+            <input id="device-platform-input" type="text" placeholder="win32 x64">
+          </label>
+        </div>
+
+        <div class="actions-row">
+          <button id="btn-heartbeat" class="btn-secondary">Heartbeat</button>
+          <button id="btn-mark-offline" class="btn-secondary">Mark Offline</button>
+          <button id="btn-refresh-sessions" class="btn-secondary">Refresh Sessions</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <span class="eyebrow">Approvals</span>
+            <h2>Pending Desktop Support Requests</h2>
+          </div>
+          <span id="pending-count" class="count-pill">0 pending</span>
+        </div>
+
+        <div id="pending-sessions" class="session-list">
+          <div class="empty-state">No pending support requests.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <span class="eyebrow">Timeline</span>
+            <h2>Recent Desktop Support Sessions</h2>
+          </div>
+        </div>
+
+        <div id="recent-sessions" class="session-list">
+          <div class="empty-state">No desktop support sessions yet.</div>
+        </div>
+      </section>
+
+      <section class="panel warning-panel">
+        <span class="eyebrow">Current Scope</span>
+        <h2>What This Scaffold Does</h2>
+        <p>This companion currently handles registration, online presence, and local approval/revoke workflow against the EchoLink backend.</p>
+        <p>It does not yet capture the desktop, stream the screen, or inject system-wide keyboard and mouse input.</p>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast-host" class="toast-host"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
